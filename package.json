@@ -1,0 +1,14 @@
+{
+  "name": "process-scheduled-reminders",
+  "version": "1.0.0",
+  "description": "Cloud Function لمعالجة التذكيرات المجدولة",
+  "main": "index.js",
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Eng. Rayan Tayssir Khazaal",
+  "license": "ISC"
+}
