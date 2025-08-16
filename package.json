@@ -1,14 +1,16 @@
 {
-  "name": "process-scheduled-reminders",
+  "name": "starter-template",
   "version": "1.0.0",
-  "description": "Cloud Function لمعالجة التذكيرات المجدولة",
-  "main": "index.js",
-  "dependencies": {
-    "node-appwrite": "^13.0.0"
-  },
+  "description": "",
+  "main": "src/main.js",
+  "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "format": "prettier --write ."
   },
-  "author": "Eng. Rayan Tayssir Khazaal",
-  "license": "ISC"
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5"
+  }
 }
