@@ -100,7 +100,7 @@ async function processScheduledReminders(log, error) {
                     );
                 } else {
                     // جدولة التذكير التالي
-                    const nextReminder = new Date(Date.now() + (10 * 60 * 1000)); // 10 دقائق
+                    const nextReminder = new Date(Date.now() + (1 * 60 * 1000)); // 10 دقائق
                     await databases.updateDocument(
                         DATABASE_ID,
                         SCHEDULED_REMINDERS_COLLECTION,
