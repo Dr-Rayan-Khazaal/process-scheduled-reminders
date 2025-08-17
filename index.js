@@ -9,7 +9,7 @@ const client = new Client()
 const databases = new Databases(client);
 
 const DATABASE_ID = 'abs-rtk-db';
-const SCHEDULED_REMINDERS_COLLECTION = 'scheduled_reminders';
+const SCHEDULED_REMINDERS_COLLECTION = 'reminder_schedule';
 const ORDER_NOTIFICATIONS_COLLECTION = 'order_notifications';
 
 /**
@@ -50,8 +50,8 @@ async function processScheduledReminders(log, error) {
             DATABASE_ID,
             SCHEDULED_REMINDERS_COLLECTION,
             [
-                `status=pending`,
-                `scheduled_at<=${now}`
+                `is_active=true`,
+                `next_reminder_at<=${now}`
             ]
         );
         
@@ -73,24 +73,45 @@ async function processScheduledReminders(log, error) {
                 }
                 
                 // إرسال التذكير
+                const currentCount = reminder.reminder_count || 0;
                 await sendReminderNotification(
                     reminder.order_id,
                     reminder.designer_id,
-                    reminder.original_notification_id,
-                    reminder.reminder_number,
+                    reminder.notification_id,
+                    currentCount + 1,
                     log
                 );
                 
-                // تحديث حالة التذكير
-                await databases.updateDocument(
-                    DATABASE_ID,
-                    SCHEDULED_REMINDERS_COLLECTION,
-                    reminder.$id,
-                    {
-                        status: 'sent',
-                        sent_at: new Date().toISOString()
-                    }
-                );
+                // تحديث عداد التذكيرات والتوقيت التالي
+                const newCount = currentCount + 1;
+                const maxReminders = reminder.max_reminders || 6;
+                
+                if (newCount >= maxReminders) {
+                    // إيقاف التذكيرات
+                    await databases.updateDocument(
+                        DATABASE_ID,
+                        SCHEDULED_REMINDERS_COLLECTION,
+                        reminder.$id,
+                        {
+                            is_active: false,
+                            stopped_reason: 'max_reminders_reached',
+                            stopped_at: new Date().toISOString()
+                        }
+                    );
+                } else {
+                    // جدولة التذكير التالي
+                    const nextReminder = new Date(Date.now() + (10 * 60 * 1000)); // 10 دقائق
+                    await databases.updateDocument(
+                        DATABASE_ID,
+                        SCHEDULED_REMINDERS_COLLECTION,
+                        reminder.$id,
+                        {
+                            reminder_count: newCount,
+                            last_reminder_sent: new Date().toISOString(),
+                            next_reminder_at: nextReminder.toISOString()
+                        }
+                    );
+                }
                 
                 processedCount++;
                 log(`تم إرسال التذكير رقم ${reminder.reminder_number} للطلب: ${reminder.order_id}`);
@@ -104,9 +125,9 @@ async function processScheduledReminders(log, error) {
                     SCHEDULED_REMINDERS_COLLECTION,
                     reminder.$id,
                     {
-                        status: 'failed',
-                        failed_at: new Date().toISOString(),
-                        error_message: err.message
+                        is_active: false,
+                        stopped_reason: 'error',
+                        stopped_at: new Date().toISOString()
                     }
                 );
             }
@@ -212,7 +233,7 @@ async function cancelRemainingReminders(orderId, designerId) {
             [
                 `order_id=${orderId}`,
                 `designer_id=${designerId}`,
-                `status=pending`
+                `is_active=true`
             ]
         );
         
@@ -222,9 +243,9 @@ async function cancelRemainingReminders(orderId, designerId) {
                 SCHEDULED_REMINDERS_COLLECTION,
                 reminder.$id,
                 {
-                    status: 'cancelled',
-                    cancelled_at: new Date().toISOString(),
-                    cancel_reason: 'notification_read'
+                    is_active: false,
+                    stopped_reason: 'notification_read',
+                    stopped_at: new Date().toISOString()
                 }
             );
         }
